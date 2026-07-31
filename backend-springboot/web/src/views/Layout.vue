@@ -99,7 +99,8 @@ const menuItems = computed(() => [
   { path: '/session/risk', title: '风险评估', icon: 'Warning' },
   { path: '/session/events', title: '事件追溯', icon: 'Connection' },
   { path: '/saga/dashboard', title: 'Saga 监控', icon: 'DataLine' },
-  { path: '/saga/list', title: 'Saga 列表', icon: 'List' }
+  { path: '/saga/list', title: 'Saga 列表', icon: 'List' },
+  { path: '/saga/annotation-demo', title: 'Saga 注解演示', icon: 'MagicStick' }
 ])
 </script>
 

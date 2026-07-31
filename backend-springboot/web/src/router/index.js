@@ -62,6 +62,12 @@ const routes = [
         meta: { title: 'Saga 列表', icon: 'List' }
       },
       {
+        path: 'saga/annotation-demo',
+        name: 'SagaAnnotationDemo',
+        component: () => import('@/views/saga/AnnotationDemo.vue'),
+        meta: { title: 'Saga 注解演示', icon: 'MagicStick' }
+      },
+      {
         path: 'saga/detail/:sagaId',
         name: 'SagaDetail',
         component: () => import('@/views/saga/Detail.vue'),
