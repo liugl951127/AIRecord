@@ -97,7 +97,9 @@ const menuItems = computed(() => [
   { path: '/session/quality', title: '质检中心', icon: 'CircleCheck' },
   { path: '/session/script', title: '话术模板', icon: 'Document' },
   { path: '/session/risk', title: '风险评估', icon: 'Warning' },
-  { path: '/session/events', title: '事件追溯', icon: 'Connection' }
+  { path: '/session/events', title: '事件追溯', icon: 'Connection' },
+  { path: '/saga/dashboard', title: 'Saga 监控', icon: 'DataLine' },
+  { path: '/saga/list', title: 'Saga 列表', icon: 'List' }
 ])
 </script>
 

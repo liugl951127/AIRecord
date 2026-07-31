@@ -48,6 +48,25 @@ const routes = [
         name: 'EventTrace',
         component: () => import('@/views/event/Trace.vue'),
         meta: { title: '事件追溯', icon: 'Connection' }
+      },
+      {
+        path: 'saga/dashboard',
+        name: 'SagaDashboard',
+        component: () => import('@/views/saga/Dashboard.vue'),
+        meta: { title: 'Saga 监控', icon: 'DataLine' }
+      },
+      {
+        path: 'saga/list',
+        name: 'SagaList',
+        component: () => import('@/views/saga/List.vue'),
+        meta: { title: 'Saga 列表', icon: 'List' }
+      },
+      {
+        path: 'saga/detail/:sagaId',
+        name: 'SagaDetail',
+        component: () => import('@/views/saga/Detail.vue'),
+        meta: { title: 'Saga 详情', icon: 'Document' },
+        hidden: true
       }
     ]
   }
