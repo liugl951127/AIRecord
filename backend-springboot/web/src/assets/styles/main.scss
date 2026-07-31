@@ -1,0 +1,100 @@
+// 全局样式
+:root {
+  --bg: #0b1020;
+  --bg-2: #11172e;
+  --panel: #161d36;
+  --panel-2: #1c2340;
+  --line: #2a3358;
+  --text: #e7ecf6;
+  --muted: #99a4c2;
+  --brand: #4f8cff;
+  --brand-2: #5fd0a4;
+  --warn: #ffb454;
+  --danger: #ff6b6b;
+  --ok: #5fd0a4;
+  --gradient: linear-gradient(135deg, #4f8cff 0%, #5fd0a4 100%);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #app {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+}
+
+a { color: var(--brand); text-decoration: none; }
+a:hover { color: var(--brand-2); }
+
+// 渐变文字
+.gradient-text {
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+// 卡片
+.panel-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+// Element Plus 暗色主题覆盖
+.el-card {
+  background: var(--panel) !important;
+  border-color: var(--line) !important;
+  color: var(--text) !important;
+}
+
+.el-table {
+  --el-table-bg-color: var(--panel);
+  --el-table-tr-bg-color: var(--panel);
+  --el-table-header-bg-color: var(--panel-2);
+  --el-table-border-color: var(--line);
+  --el-table-text-color: var(--text);
+  --el-table-header-text-color: var(--text);
+}
+
+.el-input__wrapper, .el-textarea__inner, .el-select__wrapper {
+  background-color: var(--panel-2) !important;
+  box-shadow: 0 0 0 1px var(--line) inset !important;
+}
+
+.el-button--primary {
+  --el-button-bg-color: var(--brand);
+  --el-button-border-color: var(--brand);
+  --el-button-hover-bg-color: #6ba0ff;
+  --el-button-hover-border-color: #6ba0ff;
+}
+
+// 日志面板
+.log-panel {
+  background: #0a0a0a;
+  color: #5fd0a4;
+  padding: 12px;
+  border-radius: 4px;
+  font-family: "SF Mono", "Monaco", monospace;
+  font-size: 11px;
+  max-height: 200px;
+  overflow-y: auto;
+  line-height: 1.5;
+}
+
+// NProgress 样式覆盖
+#nprogress .bar {
+  background: var(--brand) !important;
+}
+#nprogress .peg {
+  box-shadow: 0 0 10px var(--brand), 0 0 5px var(--brand) !important;
+}
+
+// 滚动条
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-2); }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--brand); }

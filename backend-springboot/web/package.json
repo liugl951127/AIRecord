@@ -1,0 +1,39 @@
+{
+  "name": "double-recording-web",
+  "version": "1.0.0",
+  "description": "线上线下双录融合系统 - 前端 (Vue 3 + Vite + Element Plus)",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 5173",
+    "lint": "eslint . --ext .vue,.js --fix"
+  },
+  "dependencies": {
+    "vue": "^3.4.27",
+    "vue-router": "^4.3.2",
+    "pinia": "^2.1.7",
+    "element-plus": "^2.7.5",
+    "@element-plus/icons-vue": "^2.3.1",
+    "axios": "^1.7.2",
+    "echarts": "^5.5.0",
+    "vue-echarts": "^7.0.3",
+    "dayjs": "^1.11.11",
+    "lodash": "^4.17.21",
+    "nprogress": "^0.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "vite": "^5.2.11",
+    "unplugin-auto-import": "^0.17.6",
+    "unplugin-vue-components": "^0.27.0",
+    "sass": "^1.77.2",
+    "eslint": "^8.57.0",
+    "eslint-plugin-vue": "^9.25.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

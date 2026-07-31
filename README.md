@@ -1,142 +1,157 @@
-# 智能双录工作台 · Smart Dual Record UI
+# AIRecord - 线上线下双录融合系统
 
-> Vue 3 + Element Plus + TypeScript + Vite
-> 对应后端：[github.com/liugl951127/SmartDualRecord](https://github.com/liugl951127/SmartDualRecord)
+> **AI**-powered **Record**ing System · 一套话术 · 一套流程 · 一套质检 · 一份证据
 
-## 功能
+[![Vue](https://img.shields.io/badge/Vue-3.4-4FC08D?logo=vue.js)](https://vuejs.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-6DB33F?logo=spring-boot)](https://spring.io/)
+[![JDK](https://img.shields.io/badge/JDK-17-007396?logo=openjdk)](https://openjdk.org/)
+[![Element Plus](https://img.shields.io/badge/Element%20Plus-2.7-409EFF)](https://element-plus.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 
-- 🎬 **录制工作台** - 8 节点可视化流程 + 实时禁播词扫描 + 关键节点高亮
-- 📝 **业务创建** - 4 渠道 + 3 套产品快捷选择 + 风险评估自动触发
-- 🔍 **全景查询** - 业务 ID 一键查询全流程状态 / 节点明细 / 录像信息
-- 📜 **话术管理** - 通用配置浏览 + 禁播词动态新增
-- 🔄 **状态机** - 16 个状态 + 合法转移明细可视化
+## 项目简介
+
+AIRecord 是一套**完整可运行**的金融产品销售双录(录音录像)系统,覆盖保险、银行理财、基金、信托等强监管产品的销售合规要求。
+
+- ✅ **一套话术**:按"产品 × 风险等级 × 流程节点"三维结构化,合规审核一次,全网生效
+- ✅ **一套流程**:线上/线下统一状态机,断点续录无感切换
+- ✅ **一套质检**:统一规则引擎 + 关键词检测,任何渠道结果一致
+- ✅ **一份证据**:视频 + 业务数据 + 签字 + 风险评估,区块链存证
+
+## 项目结构 (Monorepo)
+
+```
+AIRecord/
+├── src/                          # 【前端 A】Vue 3 + TypeScript 工作台(主)
+├── index.html                    # 前端 A 入口
+├── package.json                  # 前端 A 依赖
+├── vite.config.ts
+├── tsconfig.json
+│
+└── backend-springboot/           # 【后端 + 前端 B】Spring Boot + Vue 3 JS 演示
+    ├── pom.xml                   # Maven 配置
+    ├── src/main/java/            # 50 个 Java 源文件
+    ├── src/main/resources/       # schema.sql + data.sql + application.yml
+    ├── web/                      # 【前端 B】Vue 3 + JavaScript 演示(可独立运行)
+    └── full_demo.py              # Python 完整流程演示脚本
+```
+
+| 组件 | 技术栈 | 端口 | 说明 |
+|------|--------|------|------|
+| **前端 A**(主) | Vue 3 + TypeScript + Vite + Element Plus + Pinia | 5173 (dev) | 原"智能双录工作台前端" |
+| **后端** | Spring Boot 3.2.5 + JDK 17 + H2 | 8080 | 完整业务后端 |
+| **前端 B**(备) | Vue 3 + JavaScript + Vite + Element Plus + Pinia | 5173 (dev) | backend-springboot/web 演示前端 |
 
 ## 快速开始
 
-```bash
-# 1. 安装依赖
-npm install
+### 方式 1:仅前端 A(主工作台)
 
-# 2. 启动开发服务器
+```bash
+npm install
 npm run dev
 # 访问 http://localhost:5173
-
-# 3. 生产构建
-npm run build
-npm run preview
 ```
 
-> **重要**：需要后端在 `http://localhost:8080` 同时运行。Vite 已配代理 `/api` 和 `/ws`。
+### 方式 2:后端 + 前端 A 联动
 
-## 关键页面
+```bash
+# 终端 1:启动后端
+cd backend-springboot
+mvn spring-boot:run
 
-### 1. 录制工作台
-
-主流程：
-- 顶部：业务概况 + 进度条
-- 中部：8 节点流程图（关键节点 ★ 高亮）
-- 左下：当前节点 + ASR 输入 + 实时禁播词检测
-- 右下：必播项 / 风险匹配 / 实时日志
-- 底部：终检 + 签字
-
-**演示场景**：
-- 正常流程：在 ASR 输入框点"填充示例"→ 完成 8 节点 → 终检 → 签字
-- 阻断演示：点"填充禁播词"→ ASR 红框告警 → 完成节点被阻断
-
-### 2. 业务创建
-
-- 业务类型：保险 / 理财 / 基金
-- 4 渠道：线下 / 远程 / AI 数字人 / 互联网
-- 销售方：真人 / AI 数字人
-- 产品快捷选择：3 套专属 YAML + 1 个"新产品无 YAML"演示
-
-### 3. 全景查询
-
-输入业务 ID（如 `BNK20260801-000001`）查询：
-- 业务概况（11 个字段）
-- 8 节点明细表
-- 录像信息表
-
-### 4. 话术管理
-
-- 全局默认：禁播词 / 必问 / 必播 + 4 渠道差分
-- 运行时新增禁播词（立即生效）
-- 所有话术模板列表
-
-### 5. 状态机
-
-16 个状态可视化 + 合法转移明细
-
-## 技术栈
-
-| 项 | 版本 |
-|---|---|
-| Vue | 3.4.x |
-| Vite | 5.x |
-| TypeScript | 5.4.x |
-| Element Plus | 2.7.x |
-| Pinia | 2.1.x |
-| Axios | 1.7.x |
-
-## 主题色
-
-```
---primary: #1e2a47   深海军蓝（主色）
---accent:  #b8860b   金（强调）
---green:   #2f6f5e   合规
---accent-2:#c1453a   砖红（警示）
---blue:    #3b6b8c   钢蓝
---purple:  #6b4a8a   紫
+# 终端 2:启动前端 A (需要配置 Vite proxy)
+# 默认后端在 8080,前端会自动通过 proxy 转发 /api
+npm run dev
 ```
 
-## 工程结构
+### 方式 3:后端 + 前端 B(Vue 3 JS 演示)
 
-```
-smart-dual-record-ui/
-├── package.json
-├── vite.config.ts
-├── tsconfig.json
-├── index.html
-├── src/
-│   ├── main.ts                # 入口
-│   ├── App.vue                # 主框架 + 标签页
-│   ├── style.css              # 全局样式
-│   ├── api/
-│   │   └── index.ts           # 所有后端 API 封装
-│   ├── stores/
-│   │   └── recording.ts       # Pinia 全局状态
-│   ├── types/
-│   │   └── index.ts           # TypeScript 类型
-│   ├── utils/
-│   │   └── nodes.ts           # 8 节点元数据
-│   └── components/
-│       ├── BusinessCreate.vue       # 业务创建
-│       ├── RecordingWorkbench.vue   # 录制工作台（核心）
-│       ├── OverviewPanel.vue        # 全景查询
-│       ├── ScriptManager.vue        # 话术管理
-│       └── StateMachineViewer.vue   # 状态机可视化
+```bash
+# 终端 1:启动后端
+cd backend-springboot
+mvn spring-boot:run
+
+# 终端 2:启动前端 B
+cd backend-springboot/web
+npm install
+npm run dev
+# 访问 http://localhost:5173
 ```
 
-## 后端对应 API
+### 方式 4:命令行完整流程演示
 
-| 页面 | 调用的 API |
-|---|---|
-| 录制工作台 | `recording/*` + `compliance/scan` + `script-config/product` |
-| 业务创建 | `recording/start` + `recording/script/load` + `recording/risk/assess` + `recording/begin` |
-| 全景查询 | `recording/overview/{id}` |
-| 话术管理 | `script-config/global` + `script-config/all` + `script-config/forbidden-phrase` |
-| 状态机 | `statemachine/transitions` + `health` |
-
-## Vite 代理配置
-
-```ts
-server: {
-  port: 5173,
-  proxy: {
-    '/api': { target: 'http://localhost:8080' },
-    '/ws':  { target: 'ws://localhost:8080', ws: true }
-  }
-}
+```bash
+cd backend-springboot
+mvn spring-boot:run &
+# 等待 30 秒启动完成后
+python3 full_demo.py
 ```
 
-开发环境无需 CORS 配置。
+输出示例:
+```
+[1] 创建会话 → DR20260731183148000001
+[2] 11 节点全 PASS
+[3] 启动视频录制
+[4] 客户签字 → CFCA-DR...
+[5] Saga 执行 → 订单 + 视频哈希 + 区块链存证
+[6] 最终状态: COMPLETED / SUCCESS
+[7] 质检报告: 11/11 PASS
+[8] 事件流: 19 个事件
+V 完整双录流程演示成功!
+```
+
+## 后端核心模块
+
+| 模块 | 文件 | 作用 |
+|------|------|------|
+| 编排引擎 | `SessionOrchestrator` | 状态机推进 |
+| 话术引擎 | `ScriptEngine` | 模板 + 变量绑定 |
+| 风评引擎 | `RiskEngine` | 5 级风险评估 |
+| 质检引擎 | `QualityEngine` | 必含/禁止/时长检测 |
+| Saga 协调器 | `SagaCoordinator` | 分布式事务+补偿 |
+| 事件溯源 | `EventStore` | 全流程审计 |
+| 视频/签章/区块链 | `VideoService` 等 | 模拟实现(易替换) |
+
+## 后端 REST API(30+ 端点)
+
+- `POST /api/session/create` - 创建会话
+- `GET /api/session/{id}/current-node` - 获取当前话术
+- `POST /api/session/{id}/submit-node` - 提交节点+质检
+- `POST /api/session/{id}/video/start` - 启动录制
+- `POST /api/session/{id}/sign` - 签字
+- `POST /api/session/{id}/video/complete` - 完成录制+触发 Saga
+- `POST /api/session/{id}/pause` / `GET .../resume` - 暂停/断点续录
+- `GET /api/event/{id}` - 事件流
+- `GET /api/quality/report/{id}` - 质检报告
+- 等等...
+
+## 预置数据
+
+- 2 套话术模板(R3 银行理财-平衡型 / R1 货币基金-谨慎型)
+- 11 个标准节点
+- 8 条 P0 质检规则
+- 3 份风评问卷样例
+
+## 环境要求
+
+| 依赖 | 版本 |
+|------|------|
+| **JDK** | 17+ |
+| **Maven** | 3.8+ |
+| **Node.js** | 18+ |
+| **npm** | 9+ |
+| **Python** | 3.6+ (可选,用于运行演示脚本) |
+
+## 升级到生产
+
+| 模块 | 现状 | 生产建议 |
+|------|------|----------|
+| 数据库 | H2 内存 | MySQL 8 + 主从 |
+| 消息队列 | Spring ApplicationEvent | RocketMQ / Kafka |
+| 缓存 | Caffeine | Redis Cluster |
+| 视频 | 模拟 | MinIO/OSS + WebRTC |
+| 签章 | 模拟 | CFCA / 沃通 CA |
+| 区块链 | 模拟 | FISCO BCOS / 长安链 |
+
+## License
+
+MIT

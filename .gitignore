@@ -1,4 +1,16 @@
-# 编辑器
+# ===== Java / Maven =====
+target/
+*.class
+*.jar
+*.war
+*.ear
+.classpath
+.project
+.settings/
+mvnw
+mvnw.cmd
+
+# ===== 编辑器 =====
 .idea/
 .vscode/
 *.iml
@@ -7,38 +19,56 @@
 *.njsproj
 *.sln
 *.sw?
+*.swp
+*.sho
+.vscode/*
+!.vscode/extensions.json
+.idea/*
+!.idea/workspace.xml
+!.idea/tasks.xml
 
-# 依赖
+# ===== Node 依赖(根目录,前端 A) =====
 node_modules/
 .pnp/
 .pnp.js
 
-# 构建
+# ===== Node 依赖(后端 web 子目录) =====
+backend-springboot/web/node_modules/
+backend-springboot/web/dist/
+
+# ===== Vite 构建产物 =====
 dist/
 dist-ssr/
 *.local
 
-# 日志
+# ===== 环境变量 =====
+.env
+.env.local
+.env.*.local
+backend-springboot/web/.env.local
+backend-springboot/web/.env.*.local
+
+# ===== 日志 =====
+*.log
+logs/
+nohup.out
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# 环境
-.env.local
-.env.*.local
-.env
-
-# 系统
+# ===== 系统 =====
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# 编辑器临时
-.vscode/*
-!.vscode/extensions.json
-.idea/*
-!.idea/workspace.xml
-!.idea/tasks.xml
-*.swp
-*.swo
+# ===== H2 数据库文件 =====
+*.mv.db
+*.trace.db
+
+# ===== Vite 自动生成 =====
+backend-springboot/web/src/auto-imports.d.ts
+backend-springboot/web/src/components.d.ts
+src/auto-imports.d.ts
+src/components.d.ts
