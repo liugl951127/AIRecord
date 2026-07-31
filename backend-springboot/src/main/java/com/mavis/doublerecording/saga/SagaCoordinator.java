@@ -3,6 +3,7 @@ package com.mavis.doublerecording.saga;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mavis.doublerecording.common.BizException;
+import com.mavis.doublerecording.common.IdGenerator;
 import com.mavis.doublerecording.domain.saga.SagaLog;
 import com.mavis.doublerecording.domain.saga.SagaLogRepository;
 import com.mavis.doublerecording.event.EventStore;
@@ -43,7 +44,7 @@ public class SagaCoordinator {
      */
     @Transactional
     public Map<String, Object> execute(String sessionId, String sagaType, List<SagaStep> steps) {
-        String sagaId = "SAGA-" + System.currentTimeMillis() + "-" + sessionId;
+        String sagaId = IdGenerator.sagaId();
         log.info("[Saga {}] 开始执行,步骤数:{}", sagaId, steps.size());
 
         SagaLog sagaLog = new SagaLog();

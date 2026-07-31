@@ -1,11 +1,11 @@
 package com.mavis.doublerecording.event;
 
+import com.mavis.doublerecording.common.IdGenerator;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * 领域事件
@@ -26,7 +26,7 @@ public class DomainEvent {
     public static DomainEvent create(String sessionId, String aggregateType, String aggregateId,
                                      String eventType, Map<String, Object> payload) {
         DomainEvent event = new DomainEvent();
-        event.eventId = "EVT-" + UUID.randomUUID().toString().replace("-", "");
+        event.eventId = IdGenerator.eventId();
         event.sessionId = sessionId;
         event.aggregateType = aggregateType;
         event.aggregateId = aggregateId;

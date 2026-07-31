@@ -1,6 +1,7 @@
 package com.mavis.doublerecording.signature;
 
 import com.mavis.doublerecording.common.BizException;
+import com.mavis.doublerecording.common.IdGenerator;
 import com.mavis.doublerecording.event.EventStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,15 +39,15 @@ public class SignatureService {
      */
     public Map<String, Object> sign(String sessionId, String signImageData) {
         if (signImageData == null || signImageData.isEmpty()) {
-            // 模拟默认签名
-            signImageData = "MOCK_SIGN_" + sessionId + "_" + System.currentTimeMillis();
+            // 模拟默认签名(雪花 ID 唯一标识本次签名)
+            signImageData = "MOCK_SIGN_" + sessionId + "_" + IdGenerator.snowflakeHex();
         }
 
         // 计算签字图片哈希
         String signHash = sha256(signImageData);
 
-        // 模拟 CA 证书号
-        String certNo = "CFCA-" + sessionId.substring(0, Math.min(10, sessionId.length())) + "-" + System.currentTimeMillis();
+        // 模拟 CA 证书号(雪花 ID)
+        String certNo = "CFCA-" + sessionId.substring(0, Math.min(10, sessionId.length())) + "-" + IdGenerator.snowflakeHex();
 
         // 时间戳
         String timestamp = LocalDateTime.now().toString();

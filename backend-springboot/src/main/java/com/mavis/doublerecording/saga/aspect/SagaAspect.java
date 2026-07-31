@@ -1,5 +1,6 @@
 package com.mavis.doublerecording.saga.aspect;
 
+import com.mavis.doublerecording.common.IdGenerator;
 import com.mavis.doublerecording.domain.saga.SagaLog;
 import com.mavis.doublerecording.domain.saga.SagaLogRepository;
 import com.mavis.doublerecording.saga.annotation.Saga;
@@ -78,7 +79,7 @@ public class SagaAspect {
 
         // 创建 SagaContext
         SagaContext ctx = new SagaContext();
-        ctx.setSagaId(UUID.randomUUID().toString().replace("-", "").substring(0, 16));
+        ctx.setSagaId(IdGenerator.sagaId());
         ctx.setSagaType(saga.type());
         ctx.setSessionId(evalSpel(saga.sessionKey(), method, args,
             args.length > 0 && args[0] != null ? args[0].toString() : ""));
