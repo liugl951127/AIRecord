@@ -1,0 +1,31 @@
+{
+  "name": "smart-dual-record-ui",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "双录一体化中台 · 前端工作台 (Vue 3 + Element Plus + TypeScript)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview",
+    "type-check": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "vue": "^3.4.27",
+    "vue-router": "^4.3.2",
+    "pinia": "^2.1.7",
+    "element-plus": "^2.7.0",
+    "@element-plus/icons-vue": "^2.3.1",
+    "axios": "^1.7.2",
+    "dayjs": "^1.11.11"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11",
+    "vue-tsc": "^2.0.19",
+    "@types/node": "^20.12.12",
+    "unplugin-auto-import": "^0.17.6",
+    "unplugin-vue-components": "^0.27.0"
+  }
+}
