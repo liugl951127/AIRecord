@@ -17,7 +17,10 @@ public class RiskQuestionnaire {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "customer_id", unique = true, nullable = false, length = 32)
+    @Column(name = "questionnaire_id", unique = true, nullable = false, length = 32)
+    private String questionnaireId;
+
+    @Column(name = "customer_id", nullable = false, length = 32)
     private String customerId;
 
     @Column(name = "score", nullable = false)
@@ -29,7 +32,16 @@ public class RiskQuestionnaire {
     @Column(name = "answers", columnDefinition = "TEXT")
     private String answers;
 
+    @Column(name = "assess_time")
+    private LocalDateTime assessTime;
+
+    @Column(name = "expire_time")
+    private LocalDateTime expireTime;
+
+    @Column(name = "version")
+    private Integer version;
+
     @CreationTimestamp
-    @Column(name = "evaluated_at", nullable = false)
+    @Column(name = "evaluated_at", nullable = false, updatable = false)
     private LocalDateTime evaluatedAt;
 }

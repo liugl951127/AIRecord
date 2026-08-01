@@ -9,4 +9,7 @@ import java.util.Optional;
 public interface RiskRepository extends JpaRepository<RiskQuestionnaire, Long> {
 
     Optional<RiskQuestionnaire> findByCustomerId(String customerId);
+
+    /** 获取客户最近一次评估(按时间倒序) */
+    Optional<RiskQuestionnaire> findTopByCustomerIdOrderByAssessTimeDesc(String customerId);
 }

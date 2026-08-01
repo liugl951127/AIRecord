@@ -155,12 +155,18 @@ CREATE INDEX idx_event_aggregate ON dr_event_log(aggregate_type, aggregate_id);
 -- 风险评估问卷
 CREATE TABLE IF NOT EXISTS dr_risk_questionnaire (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    customer_id VARCHAR(32) UNIQUE NOT NULL,
+    questionnaire_id VARCHAR(32) UNIQUE NOT NULL,
+    customer_id VARCHAR(32) NOT NULL,
     score INT NOT NULL,
     risk_level VARCHAR(8) NOT NULL,
     answers TEXT,
+    assess_time TIMESTAMP,
+    expire_time TIMESTAMP,
+    version INT DEFAULT 1,
     evaluated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX idx_risk_customer_time ON dr_risk_questionnaire(customer_id, assess_time DESC);
+CREATE INDEX idx_risk_expire ON dr_risk_questionnaire(expire_time);
 
 -- Saga 事务日志
 CREATE TABLE IF NOT EXISTS dr_saga_log (
