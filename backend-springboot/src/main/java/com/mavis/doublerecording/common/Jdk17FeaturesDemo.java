@@ -45,17 +45,23 @@ public class Jdk17FeaturesDemo {
     // ========== 2. Pattern Matching for switch (JDK 17 预览) ==========
 
     /**
-     * 用 sealed + pattern matching 完整处理事件
-     * 不需要 default 分支(因为 sealed 穷尽)
+     * 用 sealed + Pattern Matching for instanceof 完整处理事件
+     * (JDK 17 正式版的 pattern matching for instanceof,switch 版本是 JDK 21+)
      */
     public String describeEvent(SagaEvent event) {
-        return switch (event) {
-            case SagaStarted s -> "Saga 启动: %s".formatted(s.sagaId());
-            case SagaStepDone s -> "步骤完成: %s -> %s".formatted(s.sagaId(), s.stepName());
-            case SagaFailed s -> "Saga 失败: %s, 原因: %s".formatted(s.sagaId(), s.reason());
-            case SagaCompensated s -> "已补偿 %d 步: %s".formatted(s.stepsCompensated(), s.sagaId());
-            // 不需要 default - sealed 类型穷尽
-        };
+        if (event instanceof SagaStarted s) {
+            return "Saga 启动: %s".formatted(s.sagaId());
+        }
+        if (event instanceof SagaStepDone s) {
+            return "步骤完成: %s -> %s".formatted(s.sagaId(), s.stepName());
+        }
+        if (event instanceof SagaFailed s) {
+            return "Saga 失败: %s, 原因: %s".formatted(s.sagaId(), s.reason());
+        }
+        if (event instanceof SagaCompensated s) {
+            return "已补偿 %d 步: %s".formatted(s.stepsCompensated(), s.sagaId());
+        }
+        return "未知事件";
     }
 
     // ========== 3. Records ==========
@@ -121,23 +127,30 @@ public class Jdk17FeaturesDemo {
 
     /**
      * 带 yield 的 switch expression(复杂逻辑)
+     *
+     * 注意: `case int s when ...` 是 JDK 21+ 的 guarded pattern,
+     * JDK 17 用 if-else 链实现相同效果。
      */
     public String getInvestmentAdvice(int score) {
-        return switch (score) {
-            case int s when s < 30 -> "建议配置 80% 货币基金 + 20% 债券";
-            case int s when s < 50 -> "建议配置 60% 债券 + 30% 平衡基金 + 10% 股票";
-            case int s when s < 70 -> "建议配置 30% 债券 + 50% 平衡基金 + 20% 股票";
-            case int s when s < 85 -> "建议配置 50% 股票基金 + 30% 平衡 + 20% 债券";
-            default -> "建议配置 70% 股票 + 20% 平衡 + 10% 货币";
-        };
+        if (score < 30) return "建议配置 80% 货币基金 + 20% 债券";
+        if (score < 50) return "建议配置 60% 债券 + 30% 平衡基金 + 10% 股票";
+        if (score < 70) return "建议配置 30% 债券 + 50% 平衡基金 + 20% 股票";
+        if (score < 85) return "建议配置 50% 股票基金 + 30% 平衡 + 20% 债券";
+        return "建议配置 70% 股票 + 20% 平衡 + 10% 货币";
     }
 
     // ========== 6. Pattern Matching for instanceof ==========
 
     /**
      * 处理不同类型对象 - 不需要显式 cast
+     *
+     * 注意: `if (value instanceof null)` 是 JDK 21+ 的特性,
+     * JDK 17 用 Objects.isNull() 代替
      */
     public String describeValue(Object value) {
+        if (Objects.isNull(value)) {
+            return "空值";
+        }
         if (value instanceof Integer i) {
             return "整数: %d, 平方: %d".formatted(i, i * i);
         }
@@ -149,9 +162,6 @@ public class Jdk17FeaturesDemo {
         }
         if (value instanceof Customer c) {
             return "客户: %s (风险评分: %d)".formatted(c.name(), c.riskScore());
-        }
-        if (value instanceof null) {
-            return "空值";
         }
         return "未知类型: " + value.getClass().getSimpleName();
     }
@@ -209,14 +219,15 @@ public class Jdk17FeaturesDemo {
             .map(this::describeEvent)
             .toList();
 
-        // 2. Pattern matching + record
+        // 2. Pattern matching for instanceof + record
         var stats = events.stream()
             .collect(Collectors.groupingBy(
-                e -> switch (e) {
-                    case SagaStarted ignored -> "started";
-                    case SagaStepDone ignored -> "stepDone";
-                    case SagaFailed ignored -> "failed";
-                    case SagaCompensated ignored -> "compensated";
+                e -> {
+                    if (e instanceof SagaStarted) return "started";
+                    if (e instanceof SagaStepDone) return "stepDone";
+                    if (e instanceof SagaFailed) return "failed";
+                    if (e instanceof SagaCompensated) return "compensated";
+                    return "other";
                 },
                 Collectors.counting()
             ));

@@ -1,11 +1,13 @@
 package com.mavis.doublerecording.common;
 
 import lombok.extern.slf4j.Slf4j;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.Security;
 import java.util.Base64;
 
 /**
@@ -21,8 +23,7 @@ import java.util.Base64;
  * - 分组长度 128 bit,密钥长度 128 bit
  * - 国产化,符合金融行业国密要求
  *
- * 注:本实现为标准 SM4-CBC-PKCS5Padding
- *    生产环境建议使用 BouncyCastle 库,这里用 JDK 自带实现
+ * 实现: BouncyCastle 1.77 (JDK 不内置 SM4,需 BouncyCastle Provider)
  */
 @Slf4j
 public class Sm4Util {
@@ -30,6 +31,7 @@ public class Sm4Util {
     private static final String ALGORITHM = "SM4";
     private static final String TRANSFORMATION = "SM4/CBC/PKCS5Padding";
     private static final int BLOCK_SIZE = 16;
+    private static final String BC_PROVIDER = "BC";
 
     /**
      * 默认密钥(16 字节 = 128 bit)
@@ -41,6 +43,14 @@ public class Sm4Util {
      * 默认 IV(16 字节)
      */
     private static final String DEFAULT_IV = "airecord00000000";
+
+    static {
+        // 注册 BouncyCastle Provider
+        if (Security.getProvider(BC_PROVIDER) == null) {
+            Security.addProvider(new BouncyCastleProvider());
+            log.info("[SM4] BouncyCastle Provider 已注册");
+        }
+    }
 
     /**
      * SM4 加密(返回 Base64)
@@ -54,7 +64,7 @@ public class Sm4Util {
      */
     public static String encrypt(String plaintext, String key, String iv) {
         try {
-            Cipher cipher = Cipher.getInstance(TRANSFORMATION);
+            Cipher cipher = Cipher.getInstance(TRANSFORMATION, BC_PROVIDER);
             SecretKeySpec keySpec = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), ALGORITHM);
             IvParameterSpec ivSpec = new IvParameterSpec(iv.getBytes(StandardCharsets.UTF_8));
             cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec);
@@ -79,7 +89,7 @@ public class Sm4Util {
     public static String decrypt(String ciphertext, String key, String iv) {
         try {
             byte[] encrypted = Base64.getDecoder().decode(ciphertext);
-            Cipher cipher = Cipher.getInstance(TRANSFORMATION);
+            Cipher cipher = Cipher.getInstance(TRANSFORMATION, BC_PROVIDER);
             SecretKeySpec keySpec = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), ALGORITHM);
             IvParameterSpec ivSpec = new IvParameterSpec(iv.getBytes(StandardCharsets.UTF_8));
             cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec);
@@ -96,7 +106,7 @@ public class Sm4Util {
      */
     public static byte[] encryptBytes(byte[] data, String key, String iv) {
         try {
-            Cipher cipher = Cipher.getInstance(TRANSFORMATION);
+            Cipher cipher = Cipher.getInstance(TRANSFORMATION, BC_PROVIDER);
             SecretKeySpec keySpec = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), ALGORITHM);
             IvParameterSpec ivSpec = new IvParameterSpec(iv.getBytes(StandardCharsets.UTF_8));
             cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec);

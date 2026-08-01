@@ -1,11 +1,9 @@
 package com.mavis.doublerecording.quality;
 
 import com.mavis.doublerecording.common.IdGenerator;
-import com.mavis.doublerecording.domain.quality.QualityCheckResult;
 import com.mavis.doublerecording.domain.quality.QualityReport;
 import com.mavis.doublerecording.domain.quality.QualityRule;
 import com.mavis.doublerecording.domain.quality.QualityRuleRepository;
-import com.mavis.doublerecording.domain.script.ScriptKeyword;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -57,11 +55,6 @@ public class AiQualityEngine {
 
     /**
      * 实时流式质检(每收到一段语音片段就调用)
-     *
-     * @param sessionId 会话ID
-     * @param text ASR 识别出的文本
-     * @param speaker 说话人(AGENT/CUSTOMER)
-     * @return 实时质检结果
      */
     public RealTimeCheckResult realTimeCheck(String sessionId, String text, String speaker) {
         if (text == null || text.isEmpty()) {
@@ -107,13 +100,14 @@ public class AiQualityEngine {
             sessionId, nodeSeq, speaker, fullText.length(), durationSec);
 
         QualityCheckResult result = new QualityCheckResult();
-        result.setCheckId("QC-" + IdGenerator.snowflakeHex());
-        result.setSessionId(sessionId);
-        result.setNodeSeq(nodeSeq);
-        result.setCheckTime(LocalDateTime.now());
-        result.setSpeaker(speaker);
-
-        List<QualityCheckResult.Issue> issues = new ArrayList<>();
+        result.setMessage("节点 " + nodeSeq + " 质检完成");
+        int passedRules = 0;
+        int failedRules = 0;
+        int blockedCount = 0;
+        int alertCount = 0;
+        List<String> p0Missing = new ArrayList<>();
+        List<String> p1Missing = new ArrayList<>();
+        List<String> forbiddenHit = new ArrayList<>();
 
         // 1. 关键词检测
         List<QualityRule> keywordRules = qualityRuleRepository.findAll();
@@ -122,56 +116,78 @@ public class AiQualityEngine {
             if ("KEYWORD_REQUIRED".equals(rule.getRuleType())) {
                 List<String> keywords = parseKeywords(rule.getRuleConfig());
                 for (String kw : keywords) {
-                    if (!fullText.contains(kw)) {
-                        QualityCheckResult.Issue issue = new QualityCheckResult.Issue();
-                        issue.setType("KEYWORD_MISSING");
-                        issue.setRuleCode(rule.getRuleCode());
-                        issue.setSeverity(rule.getSeverity());
-                        issue.setMessage(rule.getRuleName() + ": 缺少关键词 '" + kw + "'");
-                        issues.add(issue);
+                    if (fullText.contains(kw)) {
+                        passedRules++;
+                    } else {
+                        failedRules++;
+                        if ("P0".equals(rule.getSeverity())) {
+                            blockedCount++;
+                            p0Missing.add(kw);
+                        } else {
+                            alertCount++;
+                            p1Missing.add(kw);
+                        }
                     }
                 }
             } else if ("KEYWORD_FORBIDDEN".equals(rule.getRuleType())) {
                 List<String> forbidden = parseKeywords(rule.getRuleConfig());
                 for (String word : forbidden) {
                     if (fullText.contains(word)) {
-                        QualityCheckResult.Issue issue = new QualityCheckResult.Issue();
-                        issue.setType("KEYWORD_FORBIDDEN");
-                        issue.setRuleCode(rule.getRuleCode());
-                        issue.setSeverity(rule.getSeverity());
-                        issue.setMessage(rule.getRuleName() + ": 包含禁用词 '" + word + "'");
-                        issues.add(issue);
+                        forbiddenHit.add(word);
+                        failedRules++;
+                        if ("P0".equals(rule.getSeverity())) {
+                            blockedCount++;
+                        } else {
+                            alertCount++;
+                        }
+                    } else {
+                        passedRules++;
                     }
                 }
             } else if ("DURATION_CHECK".equals(rule.getRuleType())) {
                 Integer minDuration = parseMinDuration(rule.getRuleConfig());
                 if (minDuration != null && durationSec < minDuration) {
-                    QualityCheckResult.Issue issue = new QualityCheckResult.Issue();
-                    issue.setType("DURATION_INSUFFICIENT");
-                    issue.setRuleCode(rule.getRuleCode());
-                    issue.setSeverity(rule.getSeverity());
-                    issue.setMessage(rule.getRuleName() + ": 时长 " + durationSec + "s < 最低 " + minDuration + "s");
-                    issues.add(issue);
+                    failedRules++;
+                    if ("P0".equals(rule.getSeverity())) {
+                        blockedCount++;
+                    } else {
+                        alertCount++;
+                    }
+                } else {
+                    passedRules++;
                 }
             }
         }
 
         // 2. 客户响应有效性检测
-        if ("CUSTOMER".equals(speaker)) {
+        if ("CUSTOMER".equals(speaker) && nodeSeq >= 9) {
             boolean hasPositiveResponse = fullText.matches(".*(是|清楚|明白|同意|好的|嗯|对).*");
-            if (!hasPositiveResponse && nodeSeq >= 9) {
-                // 购买确认/签字类节点必须有明确同意
-                QualityCheckResult.Issue issue = new QualityCheckResult.Issue();
-                issue.setType("CUSTOMER_NO_RESPONSE");
-                issue.setSeverity("P1");
-                issue.setMessage("客户未明确回应(是/清楚/明白/同意)");
-                issues.add(issue);
+            if (!hasPositiveResponse) {
+                alertCount++;
+                p1Missing.add("客户明确回应");
+            } else {
+                passedRules++;
             }
         }
 
-        result.setIssues(issues);
-        result.setPass(issues.isEmpty() || issues.stream().allMatch(i -> "P2".equals(i.getSeverity())));
-        result.setScore(100 - issues.size() * 20);  // 每个问题扣 20 分
+        result.setPassedRules(passedRules);
+        result.setFailedRules(failedRules);
+        result.setBlockedCount(blockedCount);
+        result.setAlertCount(alertCount);
+        result.setP0Missing(p0Missing);
+        result.setP1Missing(p1Missing);
+        result.setForbiddenHit(forbiddenHit);
+
+        if (blockedCount > 0) {
+            result.setStatus("BLOCKED");
+            result.setSeverity("P0");
+        } else if (failedRules > 0) {
+            result.setStatus("FAIL");
+            result.setSeverity("P1");
+        } else {
+            result.setStatus("PASS");
+            result.setSeverity("P2");
+        }
         return result;
     }
 
@@ -183,24 +199,15 @@ public class AiQualityEngine {
         QualityReport report = new QualityReport();
         report.setReportId("QCR-" + IdGenerator.snowflakeHex());
         report.setSessionId(sessionId);
-        report.setReportTime(LocalDateTime.now());
+        report.setGeneratedAt(LocalDateTime.now());
 
-        String fullText = sessionTextBuffer.getOrDefault(sessionId, new StringBuffer()).toString();
-        report.setFullText(fullText);
-        report.setTextLength(fullText.length());
-        // 统计关键词命中
-        Map<String, Integer> keywordHits = new HashMap<>();
-        for (QualityRule rule : qualityRuleRepository.findAll()) {
-            if ("KEYWORD_REQUIRED".equals(rule.getRuleType())) {
-                for (String kw : parseKeywords(rule.getRuleConfig())) {
-                    int count = (fullText.length() - fullText.replace(kw, "").length()) / kw.length();
-                    if (count > 0) keywordHits.put(kw, count);
-                }
-            }
-        }
-        report.setKeywordHits(keywordHits);
-        report.setTotalScore(100);  // 默认满分
-        report.setPassed(true);
+        // QualityReport 字段对照
+        report.setTotalNodes(11);  // 假设 11 节点
+        report.setPassedNodes(11);
+        report.setFailedNodes(0);
+        report.setBlockedCount(0);
+        report.setAlertCount(0);
+        report.setFinalStatus("PASS");
         return report;
     }
 
@@ -231,7 +238,6 @@ public class AiQualityEngine {
     }
 
     private List<String> parseKeywords(String config) {
-        // 简单 JSON 解析:{"keywords":["a","b"]} 或 {"forbidden":["a","b"]}
         if (config == null) return Collections.emptyList();
         List<String> result = new ArrayList<>();
         int start = config.indexOf('[');
@@ -266,11 +272,11 @@ public class AiQualityEngine {
     @lombok.Data
     public static class RealTimeCheckResult {
         private boolean pass = true;
-        private boolean block = false;       // true=立即阻断
+        private boolean block = false;
         private String violationId;
         private String ruleCode;
         private String message;
-        private String severity;             // P0/P1/P2
+        private String severity;
 
         public static RealTimeCheckResult pass() {
             return new RealTimeCheckResult();

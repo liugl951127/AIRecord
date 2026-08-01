@@ -92,13 +92,12 @@ public class Jdk17DemoController {
      */
     @PostMapping("/process-demo")
     public Result<Map<String, Object>> processDemo() {
-        var events = List.of(
-            new SagaStarted("SAGA-001", System.currentTimeMillis()),
-            new SagaStepDone("SAGA-001", "CREATE_ORDER", System.currentTimeMillis()),
-            new SagaStepDone("SAGA-001", "DEDUCT_STOCK", System.currentTimeMillis()),
-            new SagaStepDone("SAGA-001", "CHARGE", System.currentTimeMillis()),
-            new SagaCompensated("SAGA-002", 2, System.currentTimeMillis())
-        );
+        List<SagaEvent> events = new java.util.ArrayList<>();
+        events.add(new SagaStarted("SAGA-001", System.currentTimeMillis()));
+        events.add(new SagaStepDone("SAGA-001", "CREATE_ORDER", System.currentTimeMillis()));
+        events.add(new SagaStepDone("SAGA-001", "DEDUCT_STOCK", System.currentTimeMillis()));
+        events.add(new SagaStepDone("SAGA-001", "CHARGE", System.currentTimeMillis()));
+        events.add(new SagaCompensated("SAGA-002", 2, System.currentTimeMillis()));
         return Result.ok(demo.processDemo(events));
     }
 }

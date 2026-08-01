@@ -153,22 +153,29 @@ public class SmartRiskEngine {
     ) {
         /**
          * 建议操作描述 - 静态文本(用 text block)
+         *
+         * 注意:JDK 17 不支持 switch tuple pattern (case (a, b, c) ->),
+         * 该特性在 JDK 21 正式,JDK 17 仍为预览。这里用 if-else 链实现。
          */
         public String recommendation() {
-            return switch ((matched, requiresWarning, forbidden)) {
-                case (true, false, false) -> """
+            if (matched && !requiresWarning && !forbidden) {
+                return """
                     客户风险等级与产品匹配,允许直接销售。
                     """;
-                case (true, true, false) -> """
+            }
+            if (matched && requiresWarning && !forbidden) {
+                return """
                     客户风险等级低于产品等级(差 1 级),
                     销售前必须进行强提示,客户二次确认后方可继续。
                     """;
-                case (false, true, true) -> """
+            }
+            if (!matched && requiresWarning && forbidden) {
+                return """
                     客户风险等级远低于产品等级(差 2 级及以上),
                     监管禁止销售此类产品给该客户。
                     """;
-                default -> "未知匹配状态";
-            };
+            }
+            return "未知匹配状态";
         }
     }
 

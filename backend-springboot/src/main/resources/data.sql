@@ -88,7 +88,7 @@ INSERT INTO dr_quality_rule (rule_code, rule_name, rule_type, description, sever
   ('R302', '签字提示完整', 'STATE_CHECK', '电子签名前必须播放签字提示话术', 'P0', TRUE, '{}');
 
 -- 4. 风评问卷样例数据
-INSERT INTO dr_risk_questionnaire (customer_id, score, risk_level, answers) VALUES
-  ('CUST_2026_0001', 75, 'R3', '{"q1":"A","q2":"B","q3":"C","q4":"B","q5":"A"}'),
-  ('CUST_2026_0002', 35, 'R1', '{"q1":"A","q2":"A","q3":"A","q4":"A","q5":"A"}'),
-  ('CUST_2026_0003', 90, 'R5', '{"q1":"E","q2":"E","q3":"E","q4":"E","q5":"E"}');
+INSERT INTO dr_risk_questionnaire (questionnaire_id, customer_id, score, risk_level, answers, assess_time, expire_time, version) VALUES
+  ('QNR_001', 'CUST_2026_0001', 75, 'R3', '{"q1":"A","q2":"B","q3":"C","q4":"B","q5":"A"}', CURRENT_TIMESTAMP, DATEADD('DAY', 30, CURRENT_TIMESTAMP), 1),
+  ('QNR_002', 'CUST_2026_0002', 35, 'R1', '{"q1":"A","q2":"A","q3":"A","q4":"A","q5":"A"}', CURRENT_TIMESTAMP, DATEADD('DAY', 30, CURRENT_TIMESTAMP), 1),
+  ('QNR_003', 'CUST_2026_0003', 90, 'R5', '{"q1":"E","q2":"E","q3":"E","q4":"E","q5":"E"}', CURRENT_TIMESTAMP, DATEADD('DAY', 30, CURRENT_TIMESTAMP), 1);
