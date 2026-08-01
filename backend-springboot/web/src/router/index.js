@@ -68,6 +68,12 @@ const routes = [
         meta: { title: 'Saga 注解演示', icon: 'MagicStick' }
       },
       {
+        path: 'saga/recording-studio',
+        name: 'RecordingStudio',
+        component: () => import('@/views/saga/RecordingStudio.vue'),
+        meta: { title: '双录开画录制', icon: 'VideoCamera' }
+      },
+      {
         path: 'saga/detail/:sagaId',
         name: 'SagaDetail',
         component: () => import('@/views/saga/Detail.vue'),
