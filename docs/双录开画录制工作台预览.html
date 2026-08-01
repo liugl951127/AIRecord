@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>双录开画录制工作台 - 设计预览</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+<script src="https://unpkg.com/@element-plus/icons-vue"></script>
+<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+<style>
+body { margin: 0; background: #0a0e1a; color: #e7ecf6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+* { box-sizing: border-box; }
+.app { padding: 16px; min-height: 100vh; }
+
+.top-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  background: linear-gradient(135deg, #1e3a8a 0%, #4f8cff 100%);
+  padding: 16px 24px; border-radius: 12px; margin-bottom: 16px;
+}
+.top-bar h2 { margin: 0; color: white; font-size: 20px; }
+.session-info { color: rgba(255,255,255,0.8); font-size: 13px; margin-left: 12px; }
+.top-right { display: flex; gap: 8px; }
+
+.main-grid {
+  display: grid; grid-template-columns: 1fr 380px 360px;
+  gap: 16px; min-height: calc(100vh - 200px);
+}
+
+.panel {
+  background: #1a1f3b; border: 1px solid #2a3358; border-radius: 8px;
+  display: flex; flex-direction: column;
+}
+.panel-header {
+  background: rgba(79,140,255,0.1); color: #e7ecf6;
+  border-bottom: 1px solid #2a3358; padding: 12px 16px;
+  font-size: 14px; display: flex; justify-content: space-between; align-items: center;
+}
+.panel-body { flex: 1; padding: 16px; overflow: auto; }
+
+.video-area {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  aspect-ratio: 4/3; background: #000; border-radius: 8px; overflow: hidden;
+}
+.video-frame {
+  position: relative; background: linear-gradient(135deg, #1e3a8a, #4f8cff);
+  border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 14px;
+}
+.video-label {
+  position: absolute; top: 8px; left: 8px;
+  background: rgba(0,0,0,0.7); color: white;
+  padding: 4px 10px; border-radius: 4px; font-size: 12px;
+}
+.control-bar { margin-top: 12px; display: flex; gap: 8px; justify-content: center; }
+
+.timeline-item {
+  position: relative; padding-left: 30px; margin-bottom: 16px;
+}
+.timeline-dot {
+  position: absolute; left: 0; top: 4px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #4f8cff; box-shadow: 0 0 0 4px rgba(79,140,255,0.2);
+}
+.timeline-item.warn .timeline-dot { background: #ffb454; box-shadow: 0 0 0 4px rgba(255,180,84,0.2); }
+.timeline-item.error .timeline-dot { background: #ff6b6b; box-shadow: 0 0 0 4px rgba(255,107,107,0.2); }
+.timeline-item.fatal .timeline-dot { background: #ff6b6b; box-shadow: 0 0 0 8px rgba(255,107,107,0.2); }
+.timeline-time { color: #99a4c2; font-size: 12px; }
+.timeline-title { color: #e7ecf6; font-weight: 600; font-size: 14px; margin: 4px 0; }
+.timeline-desc { color: #99a4c2; font-size: 12px; }
+
+.risk-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+.stat-item { text-align: center; padding: 12px 4px; border-radius: 6px; background: rgba(255,255,255,0.05); }
+.stat-item.low { border-top: 2px solid #4f8cff; }
+.stat-item.medium { border-top: 2px solid #ffb454; }
+.stat-item.high { border-top: 2px solid #ff8c54; }
+.stat-item.critical { border-top: 2px solid #ff6b6b; }
+.stat-num { font-size: 24px; font-weight: 700; color: #e7ecf6; }
+.stat-label { font-size: 11px; color: #99a4c2; }
+
+.risk-event {
+  background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px;
+  margin-bottom: 8px; border-left: 3px solid #4f8cff;
+}
+.risk-event.critical { border-left-color: #ff6b6b; background: rgba(255,107,107,0.1); }
+.risk-event.high { border-left-color: #ff8c54; }
+.risk-title { color: #e7ecf6; font-weight: 600; font-size: 13px; }
+.risk-content { color: #99a4c2; font-size: 12px; margin: 4px 0; }
+.risk-time { color: #5fd0a4; font-size: 11px; }
+
+.btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+.btn-success { background: #67c23a; color: white; }
+.btn-danger { background: #f56c6c; color: white; }
+.btn-warning { background: #e6a23c; color: white; }
+.btn-info { background: #909399; color: white; }
+.btn-primary { background: #409eff; color: white; }
+
+.demo-hint {
+  text-align: center; padding: 40px; color: #99a4c2; font-size: 13px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+<div class="app">
+  <div class="top-bar">
+    <div>
+      <h2>🎬 双录开画录制工作台</h2>
+      <span class="session-info">会话: SESS_20260801</span>
+    </div>
+    <div class="top-right">
+      <span class="btn btn-success">● 录制中</span>
+      <span class="btn btn-warning">N5 / 11</span>
+      <span class="btn btn-info">⏱ 03:42</span>
+      <span class="btn btn-danger">AI: 严重</span>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <!-- 左栏:WebRTC 视频 -->
+    <div class="panel">
+      <div class="panel-header">
+        <span>📹 实时双录画面</span>
+        <span>🎤 📷</span>
+      </div>
+      <div class="panel-body">
+        <div class="video-area">
+          <div class="video-frame">
+            <span style="font-size:40px">👨</span>
+            <div class="video-label">👤 客户经理(本地)</div>
+          </div>
+          <div class="video-frame" style="background: linear-gradient(135deg, #7e22ce, #2563eb)">
+            <span style="font-size:40px">👩</span>
+            <div class="video-label">👤 客户(远端)</div>
+          </div>
+        </div>
+        <div class="control-bar">
+          <button class="btn btn-success">▶ 开始录制</button>
+          <button class="btn btn-warning">⏸ 暂停</button>
+          <button class="btn btn-danger">⏹ 停止</button>
+          <button class="btn btn-info">➡ 下一节点</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 中栏:时间轴 -->
+    <div class="panel">
+      <div class="panel-header">
+        <span>⏰ 录制流程时间轴</span>
+        <span style="font-size:12px;color:#99a4c2">共 18 个事件</span>
+      </div>
+      <div class="panel-body">
+        <div class="timeline-item fatal">
+          <div class="timeline-dot"></div>
+          <div class="timeline-time">14:32:18</div>
+          <div class="timeline-title">🔴 严重风险: 禁用表述</div>
+          <div class="timeline-desc">"这个产品保证您的本金绝对不会亏损" - 客户经理</div>
+        </div>
+        <div class="timeline-item warn">
+          <div class="timeline-dot"></div>
+          <div class="timeline-time">14:30:45</div>
+          <div class="timeline-title">⚠ 节点切换 N04 → N05</div>
+          <div class="timeline-desc">风险揭示阶段</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-time">14:30:42</div>
+          <div class="timeline-title">✓ 客户签署风险揭示书</div>
+          <div class="timeline-desc">签字耗时 2.1s(过快风险已告警)</div>
+        </div>
+        <div class="timeline-item warn">
+          <div class="timeline-dot"></div>
+          <div class="timeline-time">14:28:12</div>
+          <div class="timeline-title">⚠ 节点切换 N03 → N04</div>
+          <div class="timeline-desc">产品介绍</div>
+        </div>
+        <div class="timeline-item error">
+          <div class="timeline-dot"></div>
+          <div class="timeline-time">14:25:30</div>
+          <div class="timeline-title">🔴 风险事件: 客户离场</div>
+          <div class="timeline-desc">画面中客户长时间未出现(2 分钟)</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-time">14:22:00</div>
+          <div class="timeline-title">✓ 录制开始</div>
+          <div class="timeline-desc">客户已明确同意(知情同意书)</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-time">14:21:55</div>
+          <div class="timeline-title">▶ 工作台就绪</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右栏:风险监控 -->
+    <div class="panel">
+      <div class="panel-header">
+        <span>⚠ AI 风险监控</span>
+        <span style="font-size:12px;color:#67c23a">● 已启用</span>
+      </div>
+      <div class="panel-body">
+        <div class="risk-stats">
+          <div class="stat-item low">
+            <div class="stat-num">2</div>
+            <div class="stat-label">低风险</div>
+          </div>
+          <div class="stat-item medium">
+            <div class="stat-num">1</div>
+            <div class="stat-label">中风险</div>
+          </div>
+          <div class="stat-item high">
+            <div class="stat-num">3</div>
+            <div class="stat-label">高风险</div>
+          </div>
+          <div class="stat-item critical">
+            <div class="stat-num">2</div>
+            <div class="stat-label">严重</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px;padding:8px;background:rgba(255,107,107,0.15);border-radius:4px;border:1px solid #ff6b6b;font-size:12px">
+          🚨 严重风险!已自动暂停录制并通知风控经理
+        </div>
+
+        <div class="risk-event critical">
+          <div class="risk-title">🔴 严重风险 - 禁用表述</div>
+          <div class="risk-content">客户经理: "这个产品保证您的本金绝对不会亏损"</div>
+          <div class="risk-time">14:32:18 · 来源: AUDIO</div>
+        </div>
+        <div class="risk-event high">
+          <div class="risk-title">⚠ 高风险 - 快速签字</div>
+          <div class="risk-content">签字耗时 2.1 秒(&lt; 3s 阈值)</div>
+          <div class="risk-time">14:30:42 · 来源: BEHAVIOR</div>
+        </div>
+        <div class="risk-event critical">
+          <div class="risk-title">🔴 严重风险 - 情绪激动</div>
+          <div class="risk-content">客户: "你们骗人!我要投诉!退钱!"</div>
+          <div class="risk-time">14:25:30 · 来源: AUDIO</div>
+        </div>
+        <div class="risk-event high">
+          <div class="risk-title">⚠ 高风险 - 录制中断</div>
+          <div class="risk-content">WebRTC 连接意外断开</div>
+          <div class="risk-time">14:20:15 · 来源: INFRA</div>
+        </div>
+        <div class="risk-event medium">
+          <div class="risk-title">⚠ 中风险 - 异常姿态</div>
+          <div class="risk-content">客户长时间转头(疑似看别人指导)</div>
+          <div class="risk-time">14:18:00 · 来源: VIDEO</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-hint">
+    📱 这是一个静态预览页面,实际功能请启动后端服务并访问 /saga/recording-studio
+  </div>
+</div>
+</div>
+</body>
+</html>
