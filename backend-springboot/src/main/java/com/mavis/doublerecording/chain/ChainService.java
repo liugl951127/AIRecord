@@ -28,11 +28,40 @@ import java.util.*;
 @RequiredArgsConstructor
 public class ChainService {
 
+    /**
+     * 交易类型(枚举)
+     */
+    public enum TransactionType {
+        DOUBLE_RECORDING_EVIDENCE,
+        VIDEO_HASH_REGISTER,
+        SIGNATURE_CERT,
+        ORDER_COMMIT,
+        QUALITY_REPORT,
+        RISK_EVENT
+    }
+
     private final Blockchain blockchain;
     private final EventStore eventStore;
 
     @Value("${app.chain.auto-mine:true}")
     private boolean autoMine;
+
+    /**
+     * 通用交易添加(自动选矿工标签)
+     */
+    public Map<String, Object> addTransaction(TransactionType type, Map<String, Object> payload) {
+        Transaction tx = new Transaction(type.name(), "AIRecord", "CHAIN", payload);
+        blockchain.addTransaction(tx);
+        Block block = autoMine ? blockchain.minePendingTransactions("MINER-" + type.name()) : null;
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("txId", tx.getTxId());
+        result.put("txHash", tx.getHash());
+        if (block != null) {
+            result.put("blockIndex", block.getIndex());
+            result.put("blockHash", block.getHash());
+        }
+        return result;
+    }
 
     /**
      * 提交存证 - 双录主流程

@@ -63,6 +63,9 @@ public class AIRiskDetectionService {
         EMOTIONAL_AGITATED("情绪激动", "客户情绪激动,可能产生投诉"),
         GUIDED_SCRIPT("引导性话术", "话术有引导/暗示客户倾向"),
         KEYWORD_MISSING("关键词缺失", "未说关键话术如'风险揭示'"),
+        AML_SUSPICIOUS("反洗钱可疑", "检测到反洗钱/恐怖融资可疑词"),
+        FRAUD_SUSPICIOUS("反欺诈可疑", "检测到欺诈嫌疑词(伪造/盗用/挪用)"),
+        REGULATORY_VIOLATION("监管违规", "违反监管规定(虚假宣传/误导销售)"),
         // 视觉类
         CUSTOMER_AWAY("客户离场", "画面中客户长时间离场"),
         NON_CUSTOMER("非本人办理", "非客户本人办理业务"),
@@ -113,6 +116,34 @@ public class AIRiskDetectionService {
             Pattern.compile("很多人(都|已经|都买了)"),
             Pattern.compile("只(剩|有).{0,3}(几|一点)"),
             Pattern.compile("错过(就|会).{0,3}(后悔|没机会)")
+        ));
+        // 反洗钱(AML)可疑词 - 来自央行《反洗钱法》要求
+        VIOLATION_PATTERNS.put(RiskType.AML_SUSPICIOUS, Arrays.asList(
+            Pattern.compile("(洗钱|反洗钱|可疑交易|大额(现金|转账))"),
+            Pattern.compile("(地下钱庄|跑分|搬砖)"),
+            Pattern.compile("(拆分|分拆).{0,3}(交易|转账)"),
+            Pattern.compile("(他人.{0,2})?(代|替).{0,3}(办|签|过)"),
+            Pattern.compile("(现金|当面).{0,3}(交易|交付|收).{0,5}(几万|几十万|上百万)"),
+            Pattern.compile("(避税|逃税|逃汇|地下保单)"),
+            Pattern.compile("(跨境|出境).{0,3}(现金|转移|汇款)")
+        ));
+        // 反欺诈可疑词 - 来自公安部和银保监要求
+        VIOLATION_PATTERNS.put(RiskType.FRAUD_SUSPICIOUS, Arrays.asList(
+            Pattern.compile("(冒用|盗用|伪造|假).{0,3}(身份|证件|签字|印章)"),
+            Pattern.compile("(内部(消息|渠道|价)|走后门)"),
+            Pattern.compile("(熟人|关系|找.{0,2}人).{0,3}(能|可以).{0,3}(办|批)"),
+            Pattern.compile("(回扣|好处费|打点|打点费)"),
+            Pattern.compile("(先(给|交).{0,3}钱|私下转|私下给)"),
+            Pattern.compile("(不要|别).{0,3}(告诉|让).{0,3}(家人|配偶)"),
+            Pattern.compile("(快(点|快)|赶紧|马上).{0,3}(签|付|转)")
+        ));
+        // 监管违规 - 来自银保监和证监会要求
+        VIOLATION_PATTERNS.put(RiskType.REGULATORY_VIOLATION, Arrays.asList(
+            Pattern.compile("(百分百|100%).{0,3}(安全|稳赚|保本|收益)"),
+            Pattern.compile("(国家|政府|银行).{0,3}(兜底|担保|保本)"),
+            Pattern.compile("(保(证|底)).{0,3}(不(亏|赔|损失))"),
+            Pattern.compile("(零(风险|损失)|无风险|无损失)"),
+            Pattern.compile("(最(高|好|优|稳).{0,3}(收益|回报|利率))")
         ));
     }
 
@@ -358,9 +389,31 @@ public class AIRiskDetectionService {
      * 计算违规表述的风险等级
      */
     private RiskLevel computeViolationLevel(String pattern, String text) {
-        if (text.contains("保证") || text.contains("承诺")) return RiskLevel.CRITICAL;
-        if (text.contains("稳赚") || text.contains("无风险")) return RiskLevel.HIGH;
-        if (text.contains("肯定") || text.contains("一定")) return RiskLevel.MEDIUM;
+        // AML/反洗钱、反欺诈、监管违规一律 CRITICAL(必须立即处理)
+        if (pattern.contains("洗钱") || pattern.contains("地下钱庄")
+            || pattern.contains("大额") || pattern.contains("拆分")
+            || pattern.contains("代") || pattern.contains("避税")
+            || pattern.contains("地下保单") || pattern.contains("跨境")) {
+            return RiskLevel.CRITICAL;
+        }
+        if (pattern.contains("冒用") || pattern.contains("盗用")
+            || pattern.contains("伪造") || pattern.contains("回扣")
+            || pattern.contains("走后门") || pattern.contains("不要告诉")
+            || pattern.contains("先给钱")) {
+            return RiskLevel.HIGH;
+        }
+        if (text.contains("保证") || text.contains("承诺")
+            || text.contains("百分百") || text.contains("国家兜底")
+            || text.contains("零风险")) {
+            return RiskLevel.CRITICAL;
+        }
+        if (text.contains("稳赚") || text.contains("无风险")
+            || text.contains("保本")) {
+            return RiskLevel.HIGH;
+        }
+        if (text.contains("肯定") || text.contains("一定")) {
+            return RiskLevel.MEDIUM;
+        }
         return RiskLevel.LOW;
     }
 
