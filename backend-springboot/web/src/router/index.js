@@ -80,6 +80,18 @@ const routes = [
         meta: { title: '区块链浏览器', icon: 'Link' }
       },
       {
+        path: 'agent/assist',
+        name: 'AgentAssist',
+        component: () => import('@/views/agent/AgentAssist.vue'),
+        meta: { title: '坐席辅助', icon: 'Headset' }
+      },
+      {
+        path: 'h5/client',
+        name: 'H5Client',
+        component: () => import('@/views/customer/H5Client.vue'),
+        meta: { title: 'H5 客户客户端', icon: 'Iphone' }
+      },
+      {
         path: 'saga/detail/:sagaId',
         name: 'SagaDetail',
         component: () => import('@/views/saga/Detail.vue'),
