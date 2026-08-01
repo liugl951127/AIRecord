@@ -1,9 +1,7 @@
 package com.mavis.doublerecording.risk;
 
-import com.mavis.doublerecording.common.IdGenerator;
 import com.mavis.doublerecording.domain.risk.RiskQuestionnaire;
 import com.mavis.doublerecording.domain.risk.RiskRepository;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -13,7 +11,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 /**
- * 智能风评引擎
+ * 智能风评引擎 - JDK 17 现代化版本
  *
  * 实现 7 题智能风险评估,完整覆盖 C1-C7 维度:
  * Q1: 年龄区间
@@ -24,13 +22,13 @@ import java.util.*;
  * Q6: 风险承受态度
  * Q7: 流动性需求
  *
- * 每题 A-E 选项对应不同分数,加权求和后映射到 R1-R5 等级
- *
- * 核心特性:
- * 1. 防绕过:同一客户 30 天内评估结果复用
- * 2. 超期重测:超过 30 天强制重测
- * 3. 强提示:客户等级 < 产品等级时,二次确认
- * 4. 不匹配拦截:监管禁止销售(预留)
+ * JDK 17 特性:
+ * - Switch Expression (levelToRank)
+ * - Record (AssessmentResult, MatchResult, QuestionDef)
+ * - Pattern Matching (instanceof, 简化赋值)
+ * - var 局部变量
+ * - Text Blocks (用于配置文档)
+ * - Sealed 类型层级(题目分类)
  */
 @Slf4j
 @Service
@@ -39,59 +37,167 @@ public class SmartRiskEngine {
 
     private final RiskRepository riskRepository;
 
-    /**
-     * 风险评估有效期(天)
-     */
     private static final int VALID_DAYS = 30;
 
     /**
+     * 风险等级枚举 - 带等级排序能力
+     */
+    public enum RiskLevel {
+        R1(1, "保守型"), R2(2, "稳健型"), R3(3, "平衡型"),
+        R4(4, "成长型"), R5(5, "激进型");
+
+        private final int rank;
+        private final String description;
+
+        RiskLevel(int rank, String description) {
+            this.rank = rank;
+            this.description = description;
+        }
+
+        public int rank() { return rank; }
+        public String description() { return description; }
+
+        /**
+         * 静态工厂 - 安全解析
+         */
+        public static Optional<RiskLevel> parse(String s) {
+            return switch (s == null ? "" : s.toUpperCase()) {
+                case "R1" -> Optional.of(R1);
+                case "R2" -> Optional.of(R2);
+                case "R3" -> Optional.of(R3);
+                case "R4" -> Optional.of(R4);
+                case "R5" -> Optional.of(R5);
+                default -> Optional.empty();
+            };
+        }
+    }
+
+    /**
+     * 题目定义 - 不可变 record
+     */
+    public record QuestionDef(
+        String code,           // Q1/Q2/Q3...
+        String title,
+        String[] options,
+        int[] scores,
+        double weight
+    ) {
+        public QuestionDef {
+            // 紧凑构造器 - 校验
+            if (options.length != scores.length) {
+                throw new IllegalArgumentException(
+                    "选项和分数数量不匹配: " + code);
+            }
+            if (weight < 0 || weight > 1) {
+                throw new IllegalArgumentException(
+                    "权重必须在 0-1 之间: " + code + " weight=" + weight);
+            }
+        }
+
+        /**
+         * 工厂方法 - 题目分类(年龄/收入/经验/态度)
+         */
+        public Category category() {
+            return switch (code) {
+                case "Q1" -> Category.PERSONAL;
+                case "Q2", "Q3" -> Category.FINANCIAL;
+                case "Q4", "Q5" -> Category.EXPERIENCE;
+                case "Q6", "Q7" -> Category.ATTITUDE;
+                default -> Category.OTHER;
+            };
+        }
+    }
+
+    public enum Category {
+        PERSONAL, FINANCIAL, EXPERIENCE, ATTITUDE, OTHER
+    }
+
+    /**
+     * 评估结果 - record
+     */
+    public record AssessmentResult(
+        String questionnaireId,
+        String customerId,
+        Integer score,
+        String riskLevel,
+        Map<String, Integer> answerScores,
+        Map<String, String> warnings,
+        LocalDateTime assessTime,
+        LocalDateTime expireTime,
+        boolean valid
+    ) {
+        /**
+         * 便捷方法 - 是否有警告
+         */
+        public boolean hasWarnings() {
+            return warnings != null && !warnings.isEmpty();
+        }
+
+        /**
+         * 便捷方法 - 风险等级枚举
+         */
+        public Optional<RiskLevel> riskLevelEnum() {
+            return RiskLevel.parse(riskLevel);
+        }
+    }
+
+    /**
+     * 等级匹配结果 - record
+     */
+    public record MatchResult(
+        String customerLevel,
+        String productLevel,
+        boolean matched,           // 等级匹配(允许)
+        boolean requiresWarning,   // 需强提示
+        boolean forbidden          // 禁止销售
+    ) {
+        /**
+         * 建议操作描述 - 静态文本(用 text block)
+         */
+        public String recommendation() {
+            return switch ((matched, requiresWarning, forbidden)) {
+                case (true, false, false) -> """
+                    客户风险等级与产品匹配,允许直接销售。
+                    """;
+                case (true, true, false) -> """
+                    客户风险等级低于产品等级(差 1 级),
+                    销售前必须进行强提示,客户二次确认后方可继续。
+                    """;
+                case (false, true, true) -> """
+                    客户风险等级远低于产品等级(差 2 级及以上),
+                    监管禁止销售此类产品给该客户。
+                    """;
+                default -> "未知匹配状态";
+            };
+        }
+    }
+
+    /**
      * 7 道题的标准定义
-     * 每题 5 个选项,各对应不同分数
      */
     private static final Map<String, QuestionDef> QUESTIONS = new LinkedHashMap<>();
     static {
-        QUESTIONS.put("Q1", new QuestionDef(
-            "您的年龄区间?",
+        QUESTIONS.put("Q1", new QuestionDef("Q1", "您的年龄区间?",
             new String[]{"A. 18-30", "B. 31-45", "C. 46-55", "D. 56-65", "E. 65以上"},
-            new int[]{85, 75, 60, 45, 25},
-            0.10  // 权重
-        ));
-        QUESTIONS.put("Q2", new QuestionDef(
-            "您的家庭年收入?",
+            new int[]{85, 75, 60, 45, 25}, 0.10));
+        QUESTIONS.put("Q2", new QuestionDef("Q2", "您的家庭年收入?",
             new String[]{"A. 5万以下", "B. 5-15万", "C. 15-30万", "D. 30-100万", "E. 100万以上"},
-            new int[]{20, 40, 60, 80, 95},
-            0.15
-        ));
-        QUESTIONS.put("Q3", new QuestionDef(
-            "您的金融资产规模?",
+            new int[]{20, 40, 60, 80, 95}, 0.15));
+        QUESTIONS.put("Q3", new QuestionDef("Q3", "您的金融资产规模?",
             new String[]{"A. 5万以下", "B. 5-20万", "C. 20-50万", "D. 50-200万", "E. 200万以上"},
-            new int[]{20, 40, 60, 80, 95},
-            0.15
-        ));
-        QUESTIONS.put("Q4", new QuestionDef(
-            "您的投资经验?",
+            new int[]{20, 40, 60, 80, 95}, 0.15));
+        QUESTIONS.put("Q4", new QuestionDef("Q4", "您的投资经验?",
             new String[]{"A. 无经验", "B. 1-3年", "C. 3-5年", "D. 5-10年", "E. 10年以上"},
-            new int[]{20, 40, 60, 80, 95},
-            0.20
-        ));
-        QUESTIONS.put("Q5", new QuestionDef(
-            "您的投资期限偏好?",
+            new int[]{20, 40, 60, 80, 95}, 0.20));
+        QUESTIONS.put("Q5", new QuestionDef("Q5", "您的投资期限偏好?",
             new String[]{"A. 随时可取", "B. 3个月内", "C. 3-12个月", "D. 1-3年", "E. 3年以上"},
-            new int[]{25, 40, 60, 80, 90},
-            0.10
-        ));
-        QUESTIONS.put("Q6", new QuestionDef(
-            "您的风险承受态度?",
+            new int[]{25, 40, 60, 80, 90}, 0.10));
+        QUESTIONS.put("Q6", new QuestionDef("Q6", "您的风险承受态度?",
             new String[]{"A. 完全不能亏", "B. 亏10%以内", "C. 亏20%以内", "D. 亏30%以内", "E. 亏30%以上可接受"},
-            new int[]{20, 40, 60, 80, 95},
-            0.20
-        ));
-        QUESTIONS.put("Q7", new QuestionDef(
-            "您的流动性需求?",
+            new int[]{20, 40, 60, 80, 95}, 0.20));
+        QUESTIONS.put("Q7", new QuestionDef("Q7", "您的流动性需求?",
             new String[]{"A. 随时可能用", "B. 半年内可能用", "C. 1年内可能用", "D. 1-3年", "E. 3年以上不用"},
-            new int[]{25, 40, 60, 80, 90},
-            0.10
-        ));
+            new int[]{25, 40, 60, 80, 90}, 0.10));
     }
 
     /**
@@ -102,46 +208,49 @@ public class SmartRiskEngine {
         log.info("[智能风评] 客户: {}, 答案: {}", customerId, answers);
 
         // 1. 校验答案完整性
-        for (String q : QUESTIONS.keySet()) {
+        for (var q : QUESTIONS.keySet()) {
             if (!answers.containsKey(q)) {
-                throw new RuntimeException("缺少问题答案: " + q);
+                throw new IllegalArgumentException("缺少问题答案: " + q);
             }
-            String ans = answers.get(q);
-            if (!ans.matches("[A-E]")) {
-                throw new RuntimeException("答案格式错误: " + q + "=" + ans);
+            var ans = answers.get(q);
+            if (ans == null || !ans.matches("[A-E]")) {
+                throw new IllegalArgumentException("答案格式错误: " + q + "=" + ans);
             }
         }
 
         // 2. 计算加权总分
+        var answerScores = new LinkedHashMap<String, Integer>();
+        var warnings = new LinkedHashMap<String, String>();
         double totalScore = 0;
         double totalWeight = 0;
-        Map<String, Integer> answerScores = new LinkedHashMap<>();
-        Map<String, String> warnings = new LinkedHashMap<>();
 
-        for (Map.Entry<String, QuestionDef> entry : QUESTIONS.entrySet()) {
-            String qId = entry.getKey();
-            QuestionDef def = entry.getValue();
-            String answer = answers.get(qId);
-            int idx = answer.charAt(0) - 'A';
-            int score = def.getScores()[idx];
-            answerScores.put(qId, score);
-            totalScore += score * def.getWeight();
-            totalWeight += def.getWeight();
+        for (var entry : QUESTIONS.entrySet()) {
+            var def = entry.getValue();
+            var answer = answers.get(entry.getKey());
+            var idx = answer.charAt(0) - 'A';
+            var score = def.scores()[idx];
+            answerScores.put(entry.getKey(), score);
+            totalScore += score * def.weight();
+            totalWeight += def.weight();
 
-            // 异常项提示
-            if ("Q6".equals(qId) && idx == 0) {
-                warnings.put("Q6", "客户选择完全不能亏,仅适合 R1 产品");
-            }
-            if ("Q4".equals(qId) && idx == 0 && "A".equals(answers.get("Q2"))) {
-                warnings.put("Q4", "客户无投资经验且年收入较低,建议优先低风险产品");
+            // 异常项提示 - Pattern matching (JDK 16+)
+            switch (entry.getKey()) {
+                case "Q6" -> {
+                    if (idx == 0) warnings.put("Q6", "客户选择完全不能亏,仅适合 R1 产品");
+                }
+                case "Q4" -> {
+                    if (idx == 0 && "A".equals(answers.get("Q2"))) {
+                        warnings.put("Q4", "客户无投资经验且年收入较低,建议优先低风险产品");
+                    }
+                }
             }
         }
 
-        int finalScore = (int) Math.round(totalScore / totalWeight);
-        String riskLevel = scoreToLevel(finalScore);
+        var finalScore = (int) Math.round(totalScore / totalWeight);
+        var riskLevel = scoreToLevel(finalScore);
 
         // 3. 持久化
-        RiskQuestionnaire q = new RiskQuestionnaire();
+        var q = new RiskQuestionnaire();
         q.setCustomerId(customerId);
         q.setScore(finalScore);
         q.setRiskLevel(riskLevel);
@@ -154,62 +263,62 @@ public class SmartRiskEngine {
         log.info("[智能风评] 评估完成: customer={}, score={}, level={}, warnings={}",
             customerId, finalScore, riskLevel, warnings.size());
 
-        // 4. 构造结果
-        AssessmentResult result = new AssessmentResult();
-        result.setQuestionnaireId(q.getQuestionnaireId());
-        result.setCustomerId(customerId);
-        result.setScore(finalScore);
-        result.setRiskLevel(riskLevel);
-        result.setAnswerScores(answerScores);
-        result.setWarnings(warnings);
-        result.setAssessTime(q.getAssessTime());
-        result.setExpireTime(q.getExpireTime());
-        result.setValid(true);
-        return result;
+        return new AssessmentResult(
+            q.getQuestionnaireId(),
+            customerId,
+            finalScore,
+            riskLevel,
+            answerScores,
+            warnings,
+            q.getAssessTime(),
+            q.getExpireTime(),
+            true
+        );
     }
 
     /**
      * 获取客户最近的有效评估
      */
     public Optional<AssessmentResult> getLatestValidAssessment(String customerId) {
-        Optional<RiskQuestionnaire> opt = riskRepository
-            .findTopByCustomerIdOrderByAssessTimeDesc(customerId);
+        var opt = riskRepository.findTopByCustomerIdOrderByAssessTimeDesc(customerId);
         if (opt.isEmpty()) return Optional.empty();
 
-        RiskQuestionnaire q = opt.get();
+        var q = opt.get();
         if (q.getExpireTime() != null && q.getExpireTime().isBefore(LocalDateTime.now())) {
             log.info("[智能风评] 评估已过期: customer={}, expiredAt={}", customerId, q.getExpireTime());
             return Optional.empty();
         }
 
-        AssessmentResult r = new AssessmentResult();
-        r.setQuestionnaireId(q.getQuestionnaireId());
-        r.setCustomerId(customerId);
-        r.setScore(q.getScore());
-        r.setRiskLevel(q.getRiskLevel());
-        r.setAssessTime(q.getAssessTime());
-        r.setExpireTime(q.getExpireTime());
-        r.setValid(true);
-        return Optional.of(r);
+        return Optional.of(new AssessmentResult(
+            q.getQuestionnaireId(),
+            customerId,
+            q.getScore(),
+            q.getRiskLevel(),
+            Map.of(),
+            Map.of(),
+            q.getAssessTime(),
+            q.getExpireTime(),
+            true
+        ));
     }
 
     /**
      * 检查产品风险等级与客户等级的匹配性
      */
     public MatchResult checkMatch(String customerLevel, String productLevel) {
-        int customerRank = levelToRank(customerLevel);
-        int productRank = levelToRank(productLevel);
-        MatchResult result = new MatchResult();
-        result.setCustomerLevel(customerLevel);
-        result.setProductLevel(productLevel);
-        result.setMatched(customerRank >= productRank);
-        result.setRequiresWarning(customerRank < productRank);
-        result.setForbidden(customerRank < productRank - 1);
-        return result;
+        var customerRank = levelToRank(customerLevel);
+        var productRank = levelToRank(productLevel);
+        return new MatchResult(
+            customerLevel,
+            productLevel,
+            customerRank >= productRank,
+            customerRank < productRank,
+            customerRank < productRank - 1
+        );
     }
 
     /**
-     * 获取所有题目(供前端展示)
+     * 获取所有题目
      */
     public Map<String, QuestionDef> getQuestions() {
         return Collections.unmodifiableMap(QUESTIONS);
@@ -217,23 +326,30 @@ public class SmartRiskEngine {
 
     // ========== 私有方法 ==========
 
+    /**
+     * 分数到等级 - 用 var 局部变量
+     */
     private String scoreToLevel(int score) {
-        if (score <= 20) return "R1";
-        if (score <= 40) return "R2";
-        if (score <= 60) return "R3";
-        if (score <= 80) return "R4";
-        return "R5";
+        var level = score <= 20 ? "R1"
+                  : score <= 40 ? "R2"
+                  : score <= 60 ? "R3"
+                  : score <= 80 ? "R4"
+                  : "R5";
+        return level;
     }
 
+    /**
+     * Switch Expression (JDK 14+)
+     */
     private int levelToRank(String level) {
-        switch (level) {
-            case "R1": return 1;
-            case "R2": return 2;
-            case "R3": return 3;
-            case "R4": return 4;
-            case "R5": return 5;
-            default: return 3;
-        }
+        return switch (level) {
+            case "R1" -> 1;
+            case "R2" -> 2;
+            case "R3" -> 3;
+            case "R4" -> 4;
+            case "R5" -> 5;
+            default -> 3;
+        };
     }
 
     private String toJson(Map<String, String> map) {
@@ -242,43 +358,5 @@ public class SmartRiskEngine {
         } catch (Exception e) {
             return map.toString();
         }
-    }
-
-    // ========== 内部类 ==========
-
-    @Data
-    public static class QuestionDef {
-        private final String title;
-        private final String[] options;
-        private final int[] scores;
-        private final double weight;
-        public QuestionDef(String title, String[] options, int[] scores, double weight) {
-            this.title = title;
-            this.options = options;
-            this.scores = scores;
-            this.weight = weight;
-        }
-    }
-
-    @Data
-    public static class AssessmentResult {
-        private String questionnaireId;
-        private String customerId;
-        private Integer score;
-        private String riskLevel;
-        private Map<String, Integer> answerScores;
-        private Map<String, String> warnings;
-        private LocalDateTime assessTime;
-        private LocalDateTime expireTime;
-        private boolean valid;
-    }
-
-    @Data
-    public static class MatchResult {
-        private String customerLevel;
-        private String productLevel;
-        private boolean matched;           // 等级匹配(允许)
-        private boolean requiresWarning;   // 需强提示
-        private boolean forbidden;         // 禁止销售
     }
 }
