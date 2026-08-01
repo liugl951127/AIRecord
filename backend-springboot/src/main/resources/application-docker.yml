@@ -1,0 +1,150 @@
+# ============================================
+# Docker 部署配置
+# SPRING_PROFILES_ACTIVE=docker 启用
+# ============================================
+
+server:
+  port: 8080
+  tomcat:
+    threads:
+      max: 400        # 生产用 400 线程
+      min-spare: 50
+    accept-count: 200
+    max-connections: 8192
+  compression:
+    enabled: true
+    mime-types: application/json,text/html,text/xml,text/css,application/javascript
+
+spring:
+  application:
+    name: airecord
+  profiles:
+    active: docker
+
+  # 主数据源(可配 MySQL,默认 H2)
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:airecord;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.h2.Driver}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+
+  # Redis(可配,默认禁用)
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+      timeout: 5s
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+
+  # 文件上传
+  servlet:
+    multipart:
+      max-file-size: 500MB      # 双录视频文件大
+      max-request-size: 500MB
+      file-size-threshold: 100MB
+
+# 区块链配置
+app:
+  chain:
+    auto-mine: true             # 自动挖矿
+    difficulty: 3               # 难度(生产用 4-5)
+    persist-file: /app/data/blockchain.json
+
+# 录制配置
+recording:
+  storage:
+    base-path: /app/uploads
+    max-duration-seconds: 7200  # 2 小时上限
+  quality:
+    min-bitrate: 500            # 最低 500kbps
+    max-dropped-rate: 0.05      # 丢帧率 > 5% 警告
+    max-latency-ms: 500         # 延迟 > 500ms 警告
+
+# AI 风控
+ai:
+  enabled: true
+  risk:
+    auto-pause-on-critical: true
+    notify-on-high: true
+
+# Actuator 监控端点
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,threaddump,heapdump,loggers
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
+    prometheus:
+      enabled: true
+    threaddump:
+      enabled: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+    tags:
+      application: ${spring.application.name}
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  info:
+    env:
+      enabled: true
+    git:
+      enabled: false
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+info:
+  app:
+    name: AIRecord
+    version: 1.6.0
+    description: 线上线下双录融合系统
+  contact:
+    name: AIRecord Team
+    email: ai@double-recording.com
+
+# 日志
+logging:
+  level:
+    root: INFO
+    com.mavis.doublerecording: INFO
+    org.springframework.web: WARN
+    org.hibernate: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
+  file:
+    name: /app/logs/airecord.log
+    max-size: 100MB
+    max-history: 30

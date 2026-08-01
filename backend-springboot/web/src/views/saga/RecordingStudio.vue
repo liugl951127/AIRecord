@@ -122,6 +122,40 @@
             </el-button>
           </template>
         </div>
+
+        <!-- 录制质量指标 -->
+        <div v-if="recordingState.recording" class="quality-panel">
+          <div class="quality-header">
+            <span>📊 录制质量</span>
+            <el-tag :type="qualityGradeColor" size="small">{{ quality.grade }}</el-tag>
+          </div>
+          <div class="quality-grid">
+            <div class="quality-item">
+              <div class="qi-label">视频码率</div>
+              <div class="qi-value">{{ quality.videoBitrate }}<span> kbps</span></div>
+            </div>
+            <div class="quality-item">
+              <div class="qi-label">帧率</div>
+              <div class="qi-value">{{ quality.videoFramerate }}<span> fps</span></div>
+            </div>
+            <div class="quality-item">
+              <div class="qi-label">丢帧率</div>
+              <div class="qi-value">{{ quality.videoDroppedRate }}<span>%</span></div>
+            </div>
+            <div class="quality-item">
+              <div class="qi-label">网络延迟</div>
+              <div class="qi-value">{{ quality.networkLatency }}<span> ms</span></div>
+            </div>
+            <div class="quality-item">
+              <div class="qi-label">带宽</div>
+              <div class="qi-value">{{ quality.bandwidthUsage }}<span> kbps</span></div>
+            </div>
+            <div class="quality-item">
+              <div class="qi-label">CPU</div>
+              <div class="qi-value">{{ quality.clientCpuUsage }}<span>%</span></div>
+            </div>
+          </div>
+        </div>
       </el-card>
 
       <!-- 中栏:时间轴 -->
@@ -270,6 +304,22 @@ const localVideoRef = ref(null)
 const remoteVideoRef = ref(null)
 let localStream = null
 let peerConnection = null
+
+// 录制质量指标
+const quality = reactive({
+  videoBitrate: 0,
+  videoFramerate: 0,
+  videoDroppedRate: 0,
+  networkLatency: 0,
+  bandwidthUsage: 0,
+  clientCpuUsage: 0,
+  grade: 'EXCELLENT'
+})
+let qualityTimer = null
+
+const qualityGradeColor = computed(() => ({
+  EXCELLENT: 'success', FAIR: 'warning', POOR: 'danger'
+}[quality.grade] || 'info'))
 
 // 风险事件
 const riskEvents = ref([])
@@ -589,10 +639,47 @@ const startTimer = () => {
   timer.value = setInterval(() => {
     if (!recordingState.paused) elapsedSeconds.value++
   }, 1000)
+  // 质量指标每 2 秒采样
+  startQualityMonitor()
 }
+
 const stopTimer = () => {
   if (timer.value) clearInterval(timer.value)
   timer.value = null
+  stopQualityMonitor()
+}
+
+const startQualityMonitor = () => {
+  stopQualityMonitor()
+  // 初始一次
+  axios.post(`/quality-metrics/start/${sessionId.value}`).then(r => {
+    updateQualityLocal(r.data.data)
+  })
+  qualityTimer = setInterval(() => {
+    axios.post(`/quality-metrics/${sessionId.value}/simulate-tick?elapsed=${elapsedSeconds.value}`)
+      .then(r => updateQualityLocal(r.data.data))
+      .catch(() => {})
+  }, 2000)
+}
+
+const stopQualityMonitor = () => {
+  if (qualityTimer) {
+    clearInterval(qualityTimer)
+    qualityTimer = null
+  }
+  if (recordingState.recording === false) {
+    axios.delete(`/quality-metrics/${sessionId.value}`).catch(() => {})
+  }
+}
+
+const updateQualityLocal = (q) => {
+  quality.videoBitrate = q.videoBitrate || 0
+  quality.videoFramerate = q.videoFramerate || 0
+  quality.videoDroppedRate = ((q.videoDroppedRate || 0) * 100).toFixed(2)
+  quality.networkLatency = q.networkLatency || 0
+  quality.bandwidthUsage = q.bandwidthUsage || 0
+  quality.clientCpuUsage = (q.clientCpuUsage || 0).toFixed(1)
+  quality.grade = q.qualityGrade || 'EXCELLENT'
 }
 
 // 模拟风控
@@ -922,5 +1009,57 @@ onUnmounted(() => {
   margin-top: 8px;
   display: flex;
   justify-content: center;
+}
+
+/* 录制质量指标面板 */
+.quality-panel {
+  margin-top: 12px;
+  background: rgba(79, 140, 255, 0.05);
+  border: 1px solid rgba(79, 140, 255, 0.2);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.quality-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  color: #e7ecf6;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.quality-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.quality-item {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.qi-label {
+  color: #99a4c2;
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+
+.qi-value {
+  color: #5fd0a4;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.qi-value span {
+  color: #99a4c2;
+  font-size: 10px;
+  font-weight: 400;
+  margin-left: 2px;
 }
 </style>

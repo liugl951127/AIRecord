@@ -74,6 +74,12 @@ const routes = [
         meta: { title: '双录开画录制', icon: 'VideoCamera' }
       },
       {
+        path: 'chain/explorer',
+        name: 'ChainExplorer',
+        component: () => import('@/views/chain/Explorer.vue'),
+        meta: { title: '区块链浏览器', icon: 'Link' }
+      },
+      {
         path: 'saga/detail/:sagaId',
         name: 'SagaDetail',
         component: () => import('@/views/saga/Detail.vue'),

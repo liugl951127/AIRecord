@@ -1,6 +1,7 @@
 package com.mavis.doublerecording.api;
 
 import com.mavis.doublerecording.common.Result;
+import com.mavis.doublerecording.report.PdfReportService;
 import com.mavis.doublerecording.report.ReportExportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -19,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 public class ReportController {
 
     private final ReportExportService reportExportService;
+    private final PdfReportService pdfReportService;
 
     /**
      * 导出 HTML 报告
@@ -40,5 +42,18 @@ public class ReportController {
     @GetMapping(value = "/{sessionId}/view", produces = MediaType.TEXT_HTML_VALUE)
     public String viewReport(@PathVariable String sessionId) {
         return reportExportService.exportHtmlReport(sessionId);
+    }
+
+    /**
+     * 导出 PDF 报告(法律级证据)
+     */
+    @GetMapping(value = "/{sessionId}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> exportPdf(@PathVariable String sessionId) {
+        byte[] pdf = pdfReportService.exportPdfReport(sessionId);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("attachment",
+            "双录报告-" + sessionId + ".pdf");
+        return ResponseEntity.ok().headers(headers).body(pdf);
     }
 }

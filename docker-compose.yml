@@ -1,0 +1,136 @@
+version: "3.8"
+
+# ============================================
+# AIRecord - Docker Compose 部署
+# 包含:应用服务 + MySQL(可选) + Redis(可选)
+# 默认用 H2 内存数据库,开箱即用
+# ============================================
+
+services:
+
+  # ========== 主应用 ==========
+  airecord:
+    build:
+      context: ./backend-springboot
+      dockerfile: Dockerfile
+    image: airecord:1.6.0
+    container_name: airecord-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - TZ=Asia/Shanghai
+      # MySQL(如启用)
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/airecord?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      - SPRING_DATASOURCE_USERNAME=airecord
+      - SPRING_DATASOURCE_PASSWORD=airecord123
+      # Redis(如启用)
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      # JVM
+      - JAVA_OPTS=-Xms512m -Xmx2048m -XX:+UseG1GC
+    volumes:
+      - ./data/uploads:/app/uploads
+      - ./data/logs:/app/logs
+    networks:
+      - airecord-net
+    depends_on:
+      - mysql
+      - redis
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  # ========== MySQL(可选) ==========
+  mysql:
+    image: mysql:8.0.32
+    container_name: airecord-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root123
+      - MYSQL_DATABASE=airecord
+      - MYSQL_USER=airecord
+      - MYSQL_PASSWORD=airecord123
+      - TZ=Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - airecord-net
+
+  # ========== Redis(可选) ==========
+  redis:
+    image: redis:7.2-alpine
+    container_name: airecord-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis-data:/data
+    networks:
+      - airecord-net
+
+  # ========== Nginx 反向代理(可选) ==========
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: airecord-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./dist/web:/usr/share/nginx/html:ro
+    networks:
+      - airecord-net
+    depends_on:
+      - airecord
+
+  # ========== Prometheus 监控(可选) ==========
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: airecord-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - airecord-net
+
+  # ========== Grafana 监控(可选) ==========
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: airecord-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - airecord-net
+    depends_on:
+      - prometheus
+
+networks:
+  airecord-net:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  redis-data:
+  prometheus-data:
+  grafana-data:

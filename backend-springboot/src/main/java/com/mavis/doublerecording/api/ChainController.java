@@ -31,6 +31,25 @@ public class ChainController {
         return Result.ok(chainService.getStatistics());
     }
 
+    @GetMapping("/list")
+    public Result<List<Block>> listAll() {
+        return Result.ok(blockchain.getChain());
+    }
+
+    @PostMapping("/add-transaction")
+    public Result<Map<String, Object>> addTransaction(@RequestBody Map<String, Object> req) {
+        String type = (String) req.get("type");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> payload = (Map<String, Object>) req.get("payload");
+        ChainService.TransactionType txType;
+        try {
+            txType = ChainService.TransactionType.valueOf(type);
+        } catch (Exception e) {
+            return Result.fail("交易类型无效: " + type);
+        }
+        return Result.ok(chainService.addTransaction(txType, payload == null ? Map.of() : payload));
+    }
+
     @GetMapping("/blocks")
     public Result<List<Block>> getAllBlocks() {
         return Result.ok(chainService.getAllBlocks());

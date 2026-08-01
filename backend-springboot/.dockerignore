@@ -1,0 +1,23 @@
+# .dockerignore - 排除不需要打进镜像的文件
+target/
+.idea/
+.vscode/
+*.iml
+.git/
+.gitignore
+node_modules/
+web/dist/
+web/node_modules/
+web/package-lock.json
+.DS_Store
+*.log
+logs/
+uploads/
+data/
+*.md
+!README.md
+README.md.bak
+.mvn/
+mvnw
+mvnw.cmd
+*.hprof
